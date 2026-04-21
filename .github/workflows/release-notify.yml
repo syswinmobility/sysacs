@@ -1,0 +1,41 @@
+name: Release Email Notification
+
+  on:
+    release:
+      types: [published]
+
+  jobs:
+    notify:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Determine recipients
+          id: setup
+          run: |
+            if [ "${{ github.event.release.prerelease }}" = "false" ]; then
+              echo "to=acs@syswin.co.kr, swmobi@syswin.co.kr" >> $GITHUB_OUTPUT
+              echo "label=Release" >> $GITHUB_OUTPUT
+            else
+              echo "to=acs@syswin.co.kr" >> $GITHUB_OUTPUT
+              echo "label=Prerelease" >> $GITHUB_OUTPUT
+            fi
+
+        - name: Send notification email
+          uses: dawidd6/action-send-mail@v3
+          with:
+            server_address: smtps.hiworks.com
+            server_port: 465
+            secure: true
+            username: ${{ secrets.MAIL_USER }}
+            password: ${{ secrets.MAIL_PASS }}
+            from: SysACS CI <mobilityai@syswin.co.kr>
+            to: ${{ steps.setup.outputs.to }}
+            subject: "[sysacs ${{ steps.setup.outputs.label }}] ${{ github.event.release.name }}"
+            convert_markdown: true
+            body: |
+              ${{ github.event.release.name }} 릴리즈가 업로드되었습니다.
+
+              **다운로드:** ${{ github.event.release.html_url }}
+
+              ---
+
+              ${{ github.event.release.body }}
